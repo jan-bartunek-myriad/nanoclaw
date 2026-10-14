@@ -236,6 +236,31 @@ describe('reply_to + quoted_message rendering', () => {
   });
 });
 
+describe('thread_context rendering (slack-thread-context)', () => {
+  it('renders earlier thread messages, including bot posts, as context inside the message', () => {
+    insertMessage('m1', 'chat-sdk', {
+      sender: 'JB',
+      text: '@Shelldon summarize the PRs above',
+      thread_context: [
+        { sender: 'JB', bot: false, time: '2026-10-14T10:00:00.000Z', text: 'which PRs are open?' },
+        { sender: 'Linear', bot: true, time: '2026-10-14T10:00:05.000Z', text: 'PR-1 <fix> & PR-2' },
+      ],
+    });
+    const result = formatMessages(getPendingMessages());
+    expect(result).toContain('<thread_context note="Earlier messages in this thread, for context only.');
+    expect(result).toContain('<thread_message sender="JB" time=');
+    expect(result).toContain('<thread_message sender="Linear" bot="true"');
+    expect(result).toContain('PR-1 &lt;fix&gt; &amp; PR-2</thread_message>');
+    expect(result.indexOf('</thread_context>')).toBeLessThan(result.indexOf('@Shelldon summarize'));
+  });
+
+  it('renders nothing for absent or empty thread_context', () => {
+    insertMessage('m1', 'chat-sdk', { sender: 'JB', text: 'hi', thread_context: [] });
+    insertMessage('m2', 'chat-sdk', { sender: 'JB', text: 'hi again' });
+    expect(formatMessages(getPendingMessages())).not.toContain('thread_context');
+  });
+});
+
 describe('XML escaping', () => {
   it('escapes <, >, &, " in sender and body', () => {
     insertMessage('m1', 'chat', {
